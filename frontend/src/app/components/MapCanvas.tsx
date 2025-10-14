@@ -1,3 +1,41 @@
+// Helper component for rendering images with hooks
+const ImageShape = ({
+  shape,
+  activeTool,
+  setSelectedShape,
+  onShapeSelect,
+}: {
+  shape: ShapeProperties;
+  activeTool: Tool;
+  setSelectedShape: (id: string) => void;
+  onShapeSelect?: (shape: ShapeProperties) => void;
+}) => {
+  const [img, setImg] = React.useState<HTMLImageElement | undefined>(undefined);
+  React.useEffect(() => {
+    if (!shape.imageSrc) return;
+    const image = new window.Image();
+    image.src = shape.imageSrc;
+    image.onload = () => setImg(image);
+  }, [shape.imageSrc]);
+  return (
+    <KonvaImage
+      key={shape.id}
+      id={shape.id}
+      x={shape.x}
+      y={shape.y}
+      width={shape.width}
+      height={shape.height}
+      image={img}
+      opacity={shape.opacity}
+      rotation={shape.rotation}
+      draggable={activeTool === "select"}
+      onClick={() => {
+        setSelectedShape(shape.id);
+        onShapeSelect?.(shape);
+      }}
+    />
+  );
+};
 import React, { useRef, useState, useCallback } from "react";
 import {
   Stage,
@@ -9,6 +47,7 @@ import {
   Text,
   Group,
   Path,
+  Image as KonvaImage,
 } from "react-konva";
 import Konva from "konva";
 import { Tool } from "./Toolbar";
@@ -28,6 +67,7 @@ interface MapCanvasProps {
     properties: Partial<ShapeProperties>
   ) => void;
   onShapeDelete?: (shapeId: string) => void;
+  onImageUpload?: (file: Blob | File) => void;
 }
 
 interface DrawingState {
@@ -56,7 +96,45 @@ export default function MapCanvas({
   onShapeAdd,
   onShapeUpdate,
   onShapeDelete,
+  onImageUpload,
 }: MapCanvasProps) {
+  // Handle image upload
+  const handleImageUpload = useCallback(
+    (file: File) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const imageObj = new window.Image();
+        imageObj.src = e.target?.result as string;
+        imageObj.onload = () => {
+          const newShape: ShapeProperties = {
+            id: generateId(),
+            type: "image",
+            x: 100,
+            y: 100,
+            width: imageObj.width,
+            height: imageObj.height,
+            fill: "transparent",
+            stroke: "#1f2937",
+            strokeWidth: 0,
+            opacity: 1,
+            rotation: 0,
+            imageSrc: imageObj.src,
+          };
+          onShapeAdd?.(newShape);
+        };
+      };
+      reader.readAsDataURL(file);
+    },
+    [onShapeAdd]
+  );
+
+  // If onImageUpload is provided, use our handler
+  React.useEffect(() => {
+    if (onImageUpload) {
+      onImageUpload(handleImageUpload as any);
+    }
+    // eslint-disable-next-line
+  }, [onImageUpload, handleImageUpload]);
   const stageRef = useRef<Konva.Stage>(null);
   const [selectedShape, setSelectedShape] = useState<string | null>(null);
   const [drawingState, setDrawingState] = useState<DrawingState>({
@@ -225,6 +303,19 @@ export default function MapCanvas({
 
       if (activeTool === "pan") {
         stage.draggable(true);
+        return;
+      }
+
+      if (activeTool === "eraser") {
+        const clickedShape = e.target;
+        if (clickedShape !== stage) {
+          const shapeId = findShapeId(clickedShape);
+          if (shapeId) {
+            onShapeDelete?.(shapeId);
+            setSelectedShape(null);
+            onShapeSelect?.(null);
+          }
+        }
         return;
       }
 
@@ -741,6 +832,17 @@ export default function MapCanvas({
 
     const shapeElement = (() => {
       switch (shape.type) {
+        case "image":
+          if (!shape.imageSrc) return null;
+          return (
+            <ImageShape
+              key={shape.id}
+              shape={shape}
+              activeTool={activeTool}
+              setSelectedShape={setSelectedShape}
+              onShapeSelect={onShapeSelect}
+            />
+          );
         case "rectangle":
           return (
             <Rect

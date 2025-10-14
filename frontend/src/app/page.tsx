@@ -1,10 +1,24 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import { useCallback, useState } from "react";
+import { KonvaEventObject } from "konva/lib/Node";
+
+// History state type definition
+interface HistoryState {
+  shapes: ShapeProperties[];
+  layers: Layer[];
+  selectedShape: ShapeProperties | null;
+}
 import Toolbar, { Tool } from "./components/Toolbar";
 import LayersPanel, { Layer } from "./components/LayersPanel";
 import PropertiesPanel, { ShapeProperties } from "./components/PropertiesPanel";
 import MapCanvas from "./components/MapCanvas";
+
+interface HistoryState {
+  shapes: ShapeProperties[];
+  layers: Layer[];
+  selectedShape: ShapeProperties | null;
+}
 
 export default function Home() {
   const [activeTool, setActiveTool] = useState<Tool>("select");
@@ -23,6 +37,59 @@ export default function Home() {
     },
   ]);
   const [activeLayer, setActiveLayer] = useState("layer1");
+
+  // History management
+  const [undoStack, setUndoStack] = useState<HistoryState[]>([]);
+  const [redoStack, setRedoStack] = useState<HistoryState[]>([]);
+
+  // Save current state to history
+  const saveToHistory = useCallback(() => {
+    const currentState: HistoryState = {
+      shapes: [...shapes],
+      layers: [...layers],
+      selectedShape,
+    };
+    setUndoStack((prev) => [...prev, currentState]);
+    setRedoStack([]); // Clear redo stack when new action is performed
+  }, [shapes, layers, selectedShape]);
+
+  // Undo handler
+  const handleUndo = useCallback(() => {
+    if (undoStack.length === 0) return;
+
+    const currentState: HistoryState = {
+      shapes: [...shapes],
+      layers: [...layers],
+      selectedShape,
+    };
+
+    const previousState = undoStack[undoStack.length - 1];
+    setShapes(previousState.shapes);
+    setLayers(previousState.layers);
+    setSelectedShape(previousState.selectedShape);
+
+    setUndoStack((prev) => prev.slice(0, -1));
+    setRedoStack((prev) => [...prev, currentState]);
+  }, [shapes, layers, selectedShape, undoStack]);
+
+  // Redo handler
+  const handleRedo = useCallback(() => {
+    if (redoStack.length === 0) return;
+
+    const currentState: HistoryState = {
+      shapes: [...shapes],
+      layers: [...layers],
+      selectedShape,
+    };
+
+    const nextState = redoStack[redoStack.length - 1];
+    setShapes(nextState.shapes);
+    setLayers(nextState.layers);
+    setSelectedShape(nextState.selectedShape);
+
+    setRedoStack((prev) => prev.slice(0, -1));
+    setUndoStack((prev) => [...prev, currentState]);
+  }, [shapes, layers, selectedShape, redoStack]);
 
   // Toolbar handlers
   const handleZoomIn = useCallback(() => {
@@ -170,8 +237,10 @@ export default function Home() {
             : layer
         )
       );
+      // Save state to history
+      saveToHistory();
     },
-    [activeLayer]
+    [activeLayer, saveToHistory]
   );
 
   const handleShapeUpdate = useCallback(
@@ -185,8 +254,10 @@ export default function Home() {
       if (selectedShape && selectedShape.id === shapeId) {
         setSelectedShape((prev) => (prev ? { ...prev, ...properties } : null));
       }
+      // Save state to history
+      saveToHistory();
     },
-    [selectedShape]
+    [selectedShape, saveToHistory]
   );
 
   const handleShapeDelete = useCallback(
@@ -202,12 +273,14 @@ export default function Home() {
           shapes: layer.shapes.filter((id) => id !== shapeId),
         }))
       );
+      // Save state to history
+      saveToHistory();
     },
-    [selectedShape]
+    [selectedShape, saveToHistory]
   );
 
   const handlePropertyChange = useCallback(
-    (property: string, value: any) => {
+    (property: string, value: string | number | boolean) => {
       if (selectedShape) {
         const updatedShape = { ...selectedShape, [property]: value };
         setSelectedShape(updatedShape);
@@ -222,6 +295,58 @@ export default function Home() {
       handleShapeDelete(selectedShape.id);
     }
   }, [selectedShape, handleShapeDelete]);
+
+  // Image upload handler (must be after state definitions)
+  const handleImageUpload = useCallback((file?: File) => {
+    if (!file) {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/*";
+      input.onchange = (e) => {
+        const selectedFile = (e.target as HTMLInputElement).files?.[0];
+        if (selectedFile) {
+          handleImageUpload(selectedFile);
+        }
+      };
+      input.click();
+      return;
+    }
+    if (!(file instanceof Blob)) {
+      console.error("Invalid file type");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const imageObj = new window.Image();
+      imageObj.src = e.target?.result as string;
+      imageObj.onload = () => {
+        const newShape: ShapeProperties = {
+          id: `shape_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          type: "image",
+          x: 100,
+          y: 100,
+          width: imageObj.width,
+          height: imageObj.height,
+          fill: "transparent",
+          stroke: "#1f2937",
+          strokeWidth: 0,
+          opacity: 1,
+          rotation: 0,
+          imageSrc: imageObj.src,
+        };
+        setShapes((prev) => [...prev, newShape]);
+        setSelectedShape(newShape);
+        setLayers((prev) =>
+          prev.map((layer) =>
+            layer.id === activeLayer
+              ? { ...layer, shapes: [...layer.shapes, newShape.id] }
+              : layer
+          )
+        );
+      };
+    };
+    reader.readAsDataURL(file);
+  }, []);
 
   return (
     <div className="h-screen flex flex-col bg-gray-100">
@@ -247,6 +372,11 @@ export default function Home() {
           onLoad={handleLoad}
           onClear={handleClear}
           zoom={zoom}
+          onImageUpload={handleImageUpload}
+          onUndo={handleUndo}
+          onRedo={handleRedo}
+          canUndo={undoStack.length > 0}
+          canRedo={redoStack.length > 0}
         />
       </div>
 
@@ -279,6 +409,7 @@ export default function Home() {
             onShapeAdd={handleShapeAdd}
             onShapeUpdate={handleShapeUpdate}
             onShapeDelete={handleShapeDelete}
+            onImageUpload={handleImageUpload}
           />
         </div>
 

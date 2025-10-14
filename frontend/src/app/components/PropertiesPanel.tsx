@@ -99,6 +99,7 @@ export default function PropertiesPanel({
                   onPropertyChange("x", parseFloat(e.target.value) || 0)
                 }
                 className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                style={{ color: "black" }}
               />
             </div>
             <div>
@@ -110,6 +111,7 @@ export default function PropertiesPanel({
                   onPropertyChange("y", parseFloat(e.target.value) || 0)
                 }
                 className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                style={{ color: "black" }}
               />
             </div>
           </div>
@@ -134,6 +136,7 @@ export default function PropertiesPanel({
                     onPropertyChange("width", parseFloat(e.target.value) || 0)
                   }
                   className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                  style={{ color: "black" }}
                 />
               </div>
               <div>
@@ -145,6 +148,7 @@ export default function PropertiesPanel({
                     onPropertyChange("height", parseFloat(e.target.value) || 0)
                   }
                   className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                  style={{ color: "black" }}
                 />
               </div>
             </div>
@@ -170,7 +174,7 @@ export default function PropertiesPanel({
               onChange={(e) =>
                 onPropertyChange("radius", parseFloat(e.target.value) || 0)
               }
-              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+              className="w-full px-2 py-1 border border-gray-300 rounded text-sm text-black"
             />
             <div className="mt-1 text-xs text-gray-500">
               Diameter: {((selectedShape.radius || 0) * 2).toFixed(0)}px
@@ -239,6 +243,7 @@ export default function PropertiesPanel({
               value={selectedShape.fill}
               onChange={(e) => onPropertyChange("fill", e.target.value)}
               className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
+              style={{ color: "black" }}
             />
           </div>
         </div>
@@ -259,6 +264,7 @@ export default function PropertiesPanel({
               value={selectedShape.stroke}
               onChange={(e) => onPropertyChange("stroke", e.target.value)}
               className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
+              style={{ color: "black" }}
             />
           </div>
         </div>
@@ -334,7 +340,7 @@ export default function PropertiesPanel({
               <textarea
                 value={selectedShape.text || ""}
                 onChange={(e) => onPropertyChange("text", e.target.value)}
-                className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                className="w-full px-2 py-1 border border-gray-300 rounded text-sm text-black"
                 rows={3}
               />
             </div>
@@ -348,7 +354,7 @@ export default function PropertiesPanel({
                 onChange={(e) =>
                   onPropertyChange("fontSize", parseFloat(e.target.value) || 16)
                 }
-                className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                className="w-full px-2 py-1 border border-gray-300 rounded text-sm text-black"
               />
             </div>
           </>

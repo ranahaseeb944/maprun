@@ -16,8 +16,15 @@ export type Tool =
   | "pan";
 
 interface ToolbarProps {
-  activeTool: Tool;
-  onToolChange: (tool: Tool) => void;
+  onSelectTool: (tool: string) => void;
+  activeTool: string;
+  onAddImage: () => void;
+  onAddLayer: () => void;
+  onUndo: () => void;
+  onRedo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  onToolChange: (tool: string) => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
   onResetZoom: () => void;
@@ -25,6 +32,7 @@ interface ToolbarProps {
   onLoad: () => void;
   onClear: () => void;
   zoom: number;
+  onImageUpload: () => void;
 }
 
 export default function Toolbar({
@@ -37,6 +45,11 @@ export default function Toolbar({
   onLoad,
   onClear,
   zoom,
+  onImageUpload,
+  onUndo,
+  onRedo,
+  canUndo = false,
+  canRedo = false,
 }: ToolbarProps) {
   const tools: { id: Tool; name: string; icon: string }[] = [
     { id: "select", name: "Select", icon: "↖️" },
@@ -80,24 +93,52 @@ export default function Toolbar({
           <span className="text-sm font-medium text-gray-700">Zoom:</span>
           <button
             onClick={onZoomOut}
-            className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-sm"
+            className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-sm text-black"
           >
             −
           </button>
-          <span className="px-3 py-1 bg-gray-50 rounded text-sm min-w-[60px] text-center">
+          <span className="px-3 py-1 bg-gray-50 rounded text-sm min-w-[60px] text-center text-black">
             {Math.round(zoom * 100)}%
           </span>
           <button
             onClick={onZoomIn}
-            className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-sm"
+            className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-sm text-black"
           >
             +
           </button>
           <button
             onClick={onResetZoom}
-            className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-sm"
+            className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-sm text-black"
           >
             Reset
+          </button>
+        </div>
+
+        {/* History Operations */}
+        <div className="flex items-center space-x-2 mr-4">
+          <button
+            onClick={onUndo}
+            disabled={!canUndo}
+            className={`px-3 py-2 rounded-lg text-sm font-medium ${
+              canUndo
+                ? "bg-indigo-500 text-white hover:bg-indigo-600"
+                : "bg-gray-300 text-gray-500 cursor-not-allowed"
+            }`}
+            title="Undo"
+          >
+            ↩️ Undo
+          </button>
+          <button
+            onClick={onRedo}
+            disabled={!canRedo}
+            className={`px-3 py-2 rounded-lg text-sm font-medium ${
+              canRedo
+                ? "bg-indigo-500 text-white hover:bg-indigo-600"
+                : "bg-gray-300 text-gray-500 cursor-not-allowed"
+            }`}
+            title="Redo"
+          >
+            ↪️ Redo
           </button>
         </div>
 
@@ -121,6 +162,20 @@ export default function Toolbar({
           >
             🗑️ Clear
           </button>
+          <label className="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 text-sm font-medium cursor-pointer">
+            🖼️ Upload Image
+            <input
+              type="file"
+              accept="image/*"
+              style={{ display: "none" }}
+              onChange={(e) => {
+                if (e.target.files && e.target.files[0] && onImageUpload) {
+                  onImageUpload(e.target.files[0]);
+                  e.target.value = "";
+                }
+              }}
+            />
+          </label>
         </div>
       </div>
 
